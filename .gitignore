@@ -1,0 +1,68 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VSCode (optional — comment out if team shares config)
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-versions
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android
+android/.gradle/
+android/app/debug
+android/app/profile
+android/app/release
+android/local.properties
+android/key.properties
+*.jks
+
+# iOS/macOS
+ios/Pods/
+ios/Runner.xcworkspace/
+macos/Pods/
+macos/Runner.xcworkspace/
+
+# Supabase (optional — if you're not committing migrations/configs)
+.supabase/config.toml
+.supabase/migrations/
+.supabase/dev.db
+.supabase/functions/node_modules/
+.supabase/docker/.env
+
+# Environment variables (🔐 DO NOT PUSH)
+.env
+
+# Output
+*.apk
+*.aab
+*.ipa
