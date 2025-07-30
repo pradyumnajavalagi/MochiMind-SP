@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_card_swiper/flutter_card_swiper.dart'; // <-- 1. IMPORT the new package
 import '../models/flashcard_model.dart';
 import '../services/api_service.dart';
 import '../widgets/flashcard_widget.dart';
-import '../widgets/app_drawer.dart'; // <-- 1. IMPORT the new drawer
+import '../widgets/app_drawer.dart';
 import './test_setup_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -12,54 +13,39 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List<Flashcard> flashcards = [];
-  int currentIndex = 0;
-  bool showDetails = false;
+  List<Flashcard> _flashcards = [];
   bool _isLoading = true;
+  // --- 2. ADD a controller for the swiper ---
+  final CardSwiperController _swiperController = CardSwiperController();
+  // --- 3. MANAGE details visibility for each card individually ---
+  final Map<String, bool> _showDetailsMap = {};
 
   @override
   void initState() {
     super.initState();
-    loadFlashcards();
+    _loadFlashcards();
   }
 
-  void loadFlashcards() async {
+  void _loadFlashcards() async {
     setState(() { _isLoading = true; });
     if (!mounted) return;
+
     final cards = await SupabaseService.getFlashcardsWithStatus();
     cards.shuffle();
+
     if(mounted) {
       setState(() {
-        flashcards = cards;
-        flashcards = cards;
-        currentIndex = 0;
-        showDetails = false;
+        _flashcards = cards;
         _isLoading = false;
       });
     }
   }
 
-  void nextCard() {
-    if (flashcards.isNotEmpty) {
-      setState(() {
-        currentIndex = (currentIndex + 1) % flashcards.length;
-        showDetails = false;
-      });
-    }
-  }
-
-  void previousCard() {
-    if (flashcards.isNotEmpty) {
-      setState(() {
-        currentIndex = (currentIndex - 1 + flashcards.length) % flashcards.length;
-        showDetails = false;
-      });
-    }
-  }
-
-  void toggleDetails() {
+  // --- 4. REPLACED old navigation methods with a toggle function ---
+  void _toggleDetails(String cardId) {
     setState(() {
-      showDetails = !showDetails;
+      // Set the state for the specific card, defaulting to false if not present
+      _showDetailsMap[cardId] = !(_showDetailsMap[cardId] ?? false);
     });
   }
 
@@ -84,61 +70,75 @@ class _HomePageState extends State<HomePage> {
               fontWeight: FontWeight.bold,
             )),
         backgroundColor: Colors.deepPurple,
-        // The LogoutButton is removed from actions, as it's now in the drawer
       ),
-      // --- 2. ADD the drawer to the Scaffold ---
       drawer: const AppDrawer(),
       body: _isLoading
-          ? const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 20),
-              Text("Loading your flashcards..."),
-            ],
-          ))
-          : flashcards.isEmpty
-          ? const Center(child: Text("No flashcards found.\nAdd some to get started!", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: Colors.grey)))
-          : GestureDetector(
-        onTap: toggleDetails,
-        onHorizontalDragEnd: (details) {
-          if (details.primaryVelocity != null && details.primaryVelocity! < 0) {
-            nextCard();
-          } else if (details.primaryVelocity != null && details.primaryVelocity! > 0) {
-            previousCard();
-          }
-        },
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FlashcardWidget(
-                card: flashcards[currentIndex],
-                showDetails: showDetails,
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.quiz_outlined),
-                label: const Text('Start Review Session'),
-                onPressed: _navigateToTestSetup,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+          ? const Center(child: CircularProgressIndicator())
+          : _flashcards.isEmpty
+          ? const Center(child: Text("No flashcards found.\nAdd some or import a deck!", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: Colors.grey)))
+      // --- 5. REPLACED GestureDetector with the CardSwiper ---
+          : Column(
+        children: [
+          Expanded(
+            child: CardSwiper(
+              controller: _swiperController,
+              cardsCount: _flashcards.length,
+              onSwipe: (previousIndex, currentIndex, direction) {
+                // When a card is swiped away, reset its details view state
+                final swipedCardId = _flashcards[previousIndex].id;
+                setState(() {
+                  _showDetailsMap[swipedCardId] = false;
+                });
+                return true; // Return true to allow the swipe
+              },
+              cardBuilder: (context, index, percentThresholdX, percentThresholdY) {
+                final card = _flashcards[index];
+                final isDetailsVisible = _showDetailsMap[card.id] ?? false;
+                // Wrap the FlashcardWidget in a GestureDetector to handle taps
+                return GestureDetector(
+                  onTap: () => _toggleDetails(card.id),
+                  child: FlashcardWidget(
+                    card: card,
+                    showDetails: isDetailsVisible,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                );
+              },
+              isLoop: true,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+            ),
+          ),
+          // --- 6. ADDED control buttons ---
+          Padding(
+            padding: const EdgeInsets.only(top:16.0,left: 16.0, right: 16.0, bottom: 116.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                FloatingActionButton(
+                  onPressed: _swiperController.undo,
+                  mini: true,
+                  child: const Icon(Icons.rotate_left),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.quiz_outlined),
+                  label: const Text('Start Review Session'),
+                  onPressed: _navigateToTestSetup,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    textStyle: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.08),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
