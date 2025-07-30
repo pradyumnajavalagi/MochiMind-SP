@@ -10,6 +10,7 @@
 .svn/
 migrate_working_dir/
 
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -66,3 +67,6 @@ macos/Runner.xcworkspace/
 *.apk
 *.aab
 *.ipa
+
+
+/android/app/google-services.json

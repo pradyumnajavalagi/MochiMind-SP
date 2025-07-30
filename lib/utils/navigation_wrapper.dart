@@ -1,11 +1,10 @@
-
-
 import 'package:animated_notch_bottom_bar/animated_notch_bottom_bar/animated_notch_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import '../pages/add_edit_page.dart';
 import '../pages/grid_page.dart';
 import '../pages/home_page.dart';
 import '../pages/search_page.dart';
+
 class NavigationWrapper extends StatefulWidget {
   const NavigationWrapper({super.key});
 
@@ -34,10 +33,11 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    // --- 1. REMOVED ProfilePage from the list ---
     final List<Widget> _screens = [
       const HomePage(),
       const GridPage(),
-      AddEditPage(onSaved: () => switchToTab(1)), // ✅ Grid tab
+      AddEditPage(onSaved: () => switchToTab(1)),
       const SearchPage(),
     ];
 
@@ -59,6 +59,7 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
         durationInMilliSeconds: 300,
         kIconSize: 20,
         kBottomRadius: 20,
+        // --- 2. REMOVED the profile item ---
         bottomBarItems: const [
           BottomBarItem(
             inActiveItem: Icon(Icons.swipe, color: Colors.white),
@@ -86,4 +87,3 @@ class _NavigationWrapperState extends State<NavigationWrapper> {
     );
   }
 }
-

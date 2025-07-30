@@ -1,3 +1,19 @@
+buildscript {
+    ext.kotlin_version = '1.9.23' // Ensure this matches your project's Kotlin version
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.2' // Ensure this matches your project's Gradle version
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // --- ADD THIS LINE ---
+        // This is the Google Services plugin required for the google-services.json file to be processed.
+        classpath 'com.google.gms:google-services:4.4.1'
+    }
+}
+
 allprojects {
     repositories {
         google()
@@ -5,12 +21,12 @@ allprojects {
     }
 }
 
-rootProject.buildDir = "../build"
+rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 subprojects {
-    project.evaluationDependsOn(":app")
+    project.evaluationDependsOn(':app')
 }
 
 tasks.register("clean", Delete) {

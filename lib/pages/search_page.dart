@@ -23,17 +23,21 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _loadFlashcards() async {
-    final cards = await SupabaseService.getUserFlashcards();
-    setState(() {
-      allFlashcards = cards;
-      filteredFlashcards = cards;
-    });
+    // This uses the correct function that includes status and tag info
+    final cards = await SupabaseService.getFlashcardsWithStatus();
+    if(mounted) {
+      setState(() {
+        allFlashcards = cards;
+        filteredFlashcards = cards;
+      });
+    }
   }
 
   void _filterFlashcards() {
     final query = _controller.text.toLowerCase();
     setState(() {
       filteredFlashcards = allFlashcards.where((card) {
+        // Reverted to only search the main text fields
         return card.onyomi.toLowerCase().contains(query) ||
             card.kunyomi.toLowerCase().contains(query) ||
             card.exampleUsage.toLowerCase().contains(query);
@@ -48,8 +52,25 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _deleteCard(String id) async {
-    await SupabaseService.deleteFlashcard(id);
-    _loadFlashcards();
+    // Added confirmation dialog for consistency
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Flashcard?'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final cardToDelete = allFlashcards.firstWhere((card) => card.id == id);
+      await SupabaseService.deleteImageByUrl(cardToDelete.kanjiImageUrl);
+      await SupabaseService.deleteFlashcard(id);
+      _loadFlashcards();
+    }
   }
 
   @override
@@ -77,9 +98,9 @@ class _SearchPageState extends State<SearchPage> {
               itemBuilder: (context, index) {
                 final card = filteredFlashcards[index];
                 return ListTile(
-                  leading: Image.network(card.kanjiImageUrl, width: 50),
+                  leading: Image.network(card.kanjiImageUrl, width: 50), // Reverted to simple Image
                   title: Text("${card.onyomi} / ${card.kunyomi}"),
-                  subtitle: Text(card.exampleUsage),
+                  subtitle: Text(card.exampleUsage, maxLines: 1, overflow: TextOverflow.ellipsis),
                   onTap: () async {
                     await Navigator.push(
                       context,

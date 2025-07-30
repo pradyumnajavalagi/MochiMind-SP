@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/flashcard_model.dart';
 import '../services/api_service.dart';
 import '../widgets/flashcard_widget.dart';
-import '../widgets/logout_button.dart';
+import '../widgets/app_drawer.dart'; // <-- 1. IMPORT the new drawer
+import './test_setup_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,6 +15,7 @@ class _HomePageState extends State<HomePage> {
   List<Flashcard> flashcards = [];
   int currentIndex = 0;
   bool showDetails = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -22,27 +24,34 @@ class _HomePageState extends State<HomePage> {
   }
 
   void loadFlashcards() async {
-    final cards = await SupabaseService.getUserFlashcards();
-    setState(() {
-      flashcards = cards;
-      currentIndex = 0;
-      showDetails = false;
-    });
+    setState(() { _isLoading = true; });
+    if (!mounted) return;
+    final cards = await SupabaseService.getFlashcardsWithStatus();
+    cards.shuffle();
+    if(mounted) {
+      setState(() {
+        flashcards = cards;
+        flashcards = cards;
+        currentIndex = 0;
+        showDetails = false;
+        _isLoading = false;
+      });
+    }
   }
 
   void nextCard() {
-    if (currentIndex < flashcards.length - 1) {
+    if (flashcards.isNotEmpty) {
       setState(() {
-        currentIndex++;
+        currentIndex = (currentIndex + 1) % flashcards.length;
         showDetails = false;
       });
     }
   }
 
   void previousCard() {
-    if (currentIndex > 0) {
+    if (flashcards.isNotEmpty) {
       setState(() {
-        currentIndex--;
+        currentIndex = (currentIndex - 1 + flashcards.length) % flashcards.length;
         showDetails = false;
       });
     }
@@ -54,29 +63,44 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _navigateToTestSetup() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TestSetupPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (flashcards.isEmpty) {
-      return Scaffold(
-      appBar: AppBar(title: const Text("MochiMind"),
-        actions: const [
-          LogoutButton(),
-        ],
-      ),
-        body: const Center(child: Text("No flashcards found",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-    ));
-    }
-
-    final card = flashcards[currentIndex];
-
     return Scaffold(
-      appBar: AppBar(title: const Text("Flashcard Swipe"),
-        actions: const [
-          LogoutButton(),
-        ],
+      appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text("MochiMind",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            )),
+        backgroundColor: Colors.deepPurple,
+        // The LogoutButton is removed from actions, as it's now in the drawer
       ),
-      body: GestureDetector(
+      // --- 2. ADD the drawer to the Scaffold ---
+      drawer: const AppDrawer(),
+      body: _isLoading
+          ? const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 20),
+              Text("Loading your flashcards..."),
+            ],
+          ))
+          : flashcards.isEmpty
+          ? const Center(child: Text("No flashcards found.\nAdd some to get started!", textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: Colors.grey)))
+          : GestureDetector(
         onTap: toggleDetails,
         onHorizontalDragEnd: (details) {
           if (details.primaryVelocity != null && details.primaryVelocity! < 0) {
@@ -90,10 +114,28 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               FlashcardWidget(
-                card: card,
+                card: flashcards[currentIndex],
                 showDetails: showDetails,
               ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+              const SizedBox(height: 40),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.quiz_outlined),
+                label: const Text('Start Review Session'),
+                onPressed: _navigateToTestSetup,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  textStyle: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              SizedBox(height: MediaQuery.of(context).size.height * 0.08),
             ],
           ),
         ),
